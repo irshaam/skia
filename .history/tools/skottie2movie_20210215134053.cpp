@@ -30,14 +30,9 @@ static DEFINE_bool2(loop, l, false, "loop mode for profiling");
 static DEFINE_int(set_dst_width, 0, "set destination width (height will be computed)");
 static DEFINE_bool2(gpu, g, false, "use GPU for rendering");
 
-static DEFINE_int_2(red, r, 125, "Background red component");
-static DEFINE_int_2(blue, b, 15, "Background blue component");
-static DEFINE_int_2(green, g, 7, "Background green component");
-static DEFINE_int_2(alpha, a, 255, "Background alpha component");
-
-static void produce_frame(SkSurface* surf, skottie::Animation* anim, double frame, SkColor color) {
+static void produce_frame(SkSurface* surf, skottie::Animation* anim, double frame) {
     anim->seekFrame(frame);
-    surf->getCanvas()->clear(color);
+    surf->getCanvas()->clear(SK_ColorWHITE);
     anim->render(surf->getCanvas());
 }
 
@@ -51,8 +46,6 @@ int main(int argc, char** argv) {
 
     CommandLineFlags::SetUsage("Converts skottie to a mp4");
     CommandLineFlags::Parse(argc, argv);
-
-    SkColor backgroundColor = SkColorSetARGB(FLAGS_alpha, FLAGS_red, FLAGS_blue, FLAGS_green);
 
     if (FLAGS_input.count() == 0) {
         SkDebugf("-i input_file.json argument required\n");
@@ -71,10 +64,9 @@ int main(int argc, char** argv) {
     }
     SkDebugf("assetPath %s\n", assetPath.c_str());
 
-    auto animation =
-            skottie::Animation::Builder()
-                    .setResourceProvider(skresources::FileResourceProvider::Make(assetPath))
-                    .makeFromFile(FLAGS_input[0]);
+    auto animation = skottie::Animation::Builder()
+        .setResourceProvider(skresources::FileResourceProvider::Make(assetPath))
+        .makeFromFile(FLAGS_input[0]);
     if (!animation) {
         SkDebugf("failed to load %s\n", FLAGS_input[0]);
         return -1;
@@ -88,15 +80,15 @@ int main(int argc, char** argv) {
     float scale = 1;
     if (FLAGS_set_dst_width > 0) {
         scale = FLAGS_set_dst_width / (float)dim.width();
-        dim = {FLAGS_set_dst_width, SkScalarRoundToInt(scale * dim.height())};
+        dim = { FLAGS_set_dst_width, SkScalarRoundToInt(scale * dim.height()) };
     }
 
     const int frames = SkScalarRoundToInt(duration * fps);
     const double frame_duration = 1.0 / fps;
 
     if (FLAGS_verbose) {
-        SkDebugf("Size %dx%d duration %g, fps %d, frame_duration %g\n", dim.width(), dim.height(),
-                 duration, fps, frame_duration);
+        SkDebugf("Size %dx%d duration %g, fps %d, frame_duration %g\n",
+                 dim.width(), dim.height(), duration, fps, frame_duration);
     }
 
     SkVideoEncoder encoder;
@@ -140,9 +132,9 @@ int main(int argc, char** argv) {
                 SkDebugf("rendering frame %g\n", frame);
             }
 
-            produce_frame(surf.get(), animation.get(), frame, backgroundColor);
+            produce_frame(surf.get(), animation.get(), frame);
 
-            AsyncRec asyncRec = {info, &encoder};
+            AsyncRec asyncRec = { info, &encoder };
             if (context) {
                 auto read_pixels_cb = [](SkSurface::ReadPixelsContext ctx,
                                          std::unique_ptr<const SkSurface::AsyncReadResult> result) {
@@ -151,9 +143,10 @@ int main(int argc, char** argv) {
                         rec->encoder->addFrame({rec->info, result->data(0), result->rowBytes(0)});
                     }
                 };
-                surf->asyncRescaleAndReadPixels(
-                        info, {0, 0, info.width(), info.height()}, SkSurface::RescaleGamma::kSrc,
-                        SkImage::RescaleMode::kNearest, read_pixels_cb, &asyncRec);
+                surf->asyncRescaleAndReadPixels(info, {0, 0, info.width(), info.height()},
+                                                SkSurface::RescaleGamma::kSrc,
+                                                SkImage::RescaleMode::kNearest,
+                                                read_pixels_cb, &asyncRec);
                 context->submit();
             } else {
                 SkPixmap pm;
@@ -165,8 +158,8 @@ int main(int argc, char** argv) {
 
         if (FLAGS_loop) {
             double loop_dur = SkTime::GetSecs() - loop_start;
-            SkDebugf("recording secs %g, frames %d, recording fps %d\n", loop_dur, frames,
-                     (int)(frames / loop_dur));
+            SkDebugf("recording secs %g, frames %d, recording fps %d\n",
+                     loop_dur, frames, (int)(frames / loop_dur));
         }
     } while (FLAGS_loop);
 

@@ -52,8 +52,6 @@ int main(int argc, char** argv) {
     CommandLineFlags::SetUsage("Converts skottie to a mp4");
     CommandLineFlags::Parse(argc, argv);
 
-    SkColor backgroundColor = SkColorSetARGB(FLAGS_alpha, FLAGS_red, FLAGS_blue, FLAGS_green);
-
     if (FLAGS_input.count() == 0) {
         SkDebugf("-i input_file.json argument required\n");
         return -1;

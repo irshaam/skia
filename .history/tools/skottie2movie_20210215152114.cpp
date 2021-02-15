@@ -35,9 +35,9 @@ static DEFINE_int_2(blue, b, 15, "Background blue component");
 static DEFINE_int_2(green, g, 7, "Background green component");
 static DEFINE_int_2(alpha, a, 255, "Background alpha component");
 
-static void produce_frame(SkSurface* surf, skottie::Animation* anim, double frame, SkColor color) {
+static void produce_frame(SkSurface* surf, skottie::Animation* anim, double frame) {
     anim->seekFrame(frame);
-    surf->getCanvas()->clear(color);
+    surf->getCanvas()->clear(SK_ColorWHITE);
     anim->render(surf->getCanvas());
 }
 
@@ -51,8 +51,6 @@ int main(int argc, char** argv) {
 
     CommandLineFlags::SetUsage("Converts skottie to a mp4");
     CommandLineFlags::Parse(argc, argv);
-
-    SkColor backgroundColor = SkColorSetARGB(FLAGS_alpha, FLAGS_red, FLAGS_blue, FLAGS_green);
 
     if (FLAGS_input.count() == 0) {
         SkDebugf("-i input_file.json argument required\n");
@@ -140,7 +138,7 @@ int main(int argc, char** argv) {
                 SkDebugf("rendering frame %g\n", frame);
             }
 
-            produce_frame(surf.get(), animation.get(), frame, backgroundColor);
+            produce_frame(surf.get(), animation.get(), frame);
 
             AsyncRec asyncRec = {info, &encoder};
             if (context) {
